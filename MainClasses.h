@@ -13,22 +13,21 @@ public:
 		FigureColor = COLOR;
 	};
 	virtual bool CanMoveFigure(int newX, int newY) {
-		return 1;
+		return true;
 	};
-	void MoveFigure(int newX, int newY);
-	int getX(int x);
-	int getY(int y);
+	int getX();
+	int getY();
 	bool getColor(color FigureColor);
 };
 class Cell {
 public:
 	int x, y;
-	Figure figure;
+	Figure* figure;
 	bool isFree;
 	bool isAttacked;
 public:
 	Cell(int x, int y, Figure figure, bool isFree) :
-		x(x), y(y), figure(figure), isFree(isFree), isAttacked(false) {}
+		x(x), y(y), figure(&figure), isFree(isFree), isAttacked(false) {}
 	bool isCellFree() {
 		return isFree;
 	};
@@ -48,13 +47,14 @@ public:
 	bool isCheckMate(Cell* board[8][8]);
 	bool isCheck(Cell* board[8][8]);
 	bool isCellOccupied(int dx, int dy);
+	void MakeMove(Cell* board[8][8]);
 	void ArrangeFigures(Cell* board[8][8]);
 	void GameStart(Cell* board[8][8]);
 	void PrintBoard(Cell* board[8][8]);
 };
 class Knight :public Figure {
 public:
-	Knight(int x, int y, color COLOR) :Figure(x, y, type::KNIGHT, COLOR) {};
+	Knight(int x, int y, color COLOR) : Figure(x, y, type::KNIGHT, COLOR) {};
 	bool CanMoveFigure(int dx, int dy) override;
 };
 class Rock :public Figure {
@@ -63,12 +63,22 @@ public:
 	bool CanMoveFigure(int dx, int dy) override;
 };
 class Pawn :public Figure {
-protected:
+public:
 	bool PawnTurn;//Превращение пешки
 	bool CanTwoCellsGo;
 public:
 	Pawn(int x, int y, bool PawnTurn, bool CanTwoCellsGo, color COLOR) :Figure(x, y, type::PAWN, COLOR) {};
-	bool CanMoveFigure(int dx, int dy, bool CanTwoCellsGo);
+	bool CanMoveFigure(int dx, int dy) override 
+	{
+		if (Pawn::CanTwoCellsGo) {
+			Pawn::CanTwoCellsGo = false;
+			return (dx - x == 2 && dy == y ); 
+		}
+		else {
+			return (abs(dx - x) == 1 && (dy == y));
+		}
+	};
+	bool CanTakeFigure(int dx, int dy);
 };
 class Queen : public Figure {
 public:
