@@ -13,23 +13,23 @@ bool Figure::getColor(color FigureColor) {
 	return FigureColor == Figure::color::WHITE;
 }
 // дочерние классы Figure
-bool Knight::CanMoveFigure(int dx, int dy) {
+bool Knight::CanMoveFigure(int dx, int dy, int x1, int y1) {
 	return (abs(x - dx) * abs(y - dy)) == 2;
 }
 
 bool Pawn::CanTakeFigure(int dx, int dy) {
 	return (abs(this->x - dx) == 1 && abs(this->y - dy) == 1);
 }
-bool Bishop::CanMoveFigure(int dx, int dy) {
+bool Bishop::CanMoveFigure(int dx, int dy, int x1, int y1) {
 	return (abs(dx - x) == abs(dy - y));
 }
-bool Queen::CanMoveFigure(int dx, int dy) {
+bool Queen::CanMoveFigure(int dx, int dy, int x1, int y1) {
 	return ((abs(dx - x) == abs(dy - y)) || ((x == dx) && (y != dy)) || ((dy == y) && (x != dx)));
 }
-bool King::CanMoveFigure(int dx, int dy) {
+bool King::CanMoveFigure(int dx, int dy, int x1, int y1) {
 	return ((abs(dx - x) == 1) || (abs(dy - y)) || (abs(dy - y) && abs(dx - x)));
 }
-bool Rock::CanMoveFigure(int dx, int dy) {
+bool Rock::CanMoveFigure(int dx, int dy, int x1, int y1) {
 	return (((x == dx) && (y != dy)) || ((dy == y) && (x != dx)));
 }
 // класс Board
@@ -123,75 +123,78 @@ void Board::MakeMove(Cell* board[8][8]) {
 	std::cout << "Введите координату клетки, в которую хотите сходить: ";
 	std::cin >> toCoord;
 	int x1, y1, x2, y2;
-	std::cout << fromCoord[0] << "," << fromCoord[1] << std::endl;
 	x1 = fromCoord[0] - 'a';
 	x2 = toCoord[0] - 'a';
 	y1 = fromCoord[1] - '1';
 	y2 = toCoord[1] - '1';
-	std::cout << x1 << "," << y1 << std::endl;
+	int nx, ny;
+	//std::cout << "y = "  << y1 << "," << "x = " << x1 << std::endl;
+	//std::cout << y2 << "," << x2 << std::endl;
 	if (x1 >= 0 && x2 >= 0 && y1 >= 0 && y2 >= 0 && x1 < 8 && x2 < 8 && y1 < 8 && y2 < 8) {
 		Cell* fromCell = board[y1][x1];
-		Cell* toCell = board[x2][y2];
+		Cell* toCell = board[y2][x2];
 		if (fromCell->isFree) {
 			std::cout << "Выбранная клетка пуста!" << std::endl;
 			return;
 		}
-		//bool vm = false;
-		//vm = fromCell->figure->CanMoveFigure(x2, y2); //победа это говно наконец заработало ура
 		bool validMove = false;
+		Figure* figure = fromCell->figure;
 		switch (fromCell->figure->FigureType) {
 		case Figure::type::PAWN:
-			if (abs(x2 - x1) == abs(y2 - y1)) 
+			if (abs(x2 - x1) == abs(y2 - y1) && abs(x2-x1) == 1) 
 			{
-				///значит пользователь хочет побить пешкой 
-				///надо добавить проверку что он только на одну клетку шагнул 
-				/// и что бьет только пешку другого цвета
-				if (fromCell->figure->FigureColor == toCell->figure->FigureColor) {
-					std::cout << "Ход невозможен!";
-					validMove = false;
-				}
-				else {
-					///бьем пешку
+				Figure* attackedFigure = toCell->figure;
+				if (attackedFigure->FigureColor != figure->FigureColor && attackedFigure->FigureColor != Figure::color::NONE)
+				{
 					validMove = true;
+				}
+				else
+				{
+					std::cout << "Такой ход невозможен";
+					validMove = false;
 				}
 			}
 			else
 			{
-				validMove = fromCell->figure->CanMoveFigure(y2, x2) && board[y2][x2];
+				//std::cout << "x2 = " << x2 << " y2 = " << y2 << std::endl;
+				//std::cout << "x1 = " << x1 << " y1 = " << y1 << std::endl;
+				validMove = fromCell->figure->CanMoveFigure(y2, x2,y1,x1) && board[y2][x2]->isFree && (fromCell->figure->FigureColor != toCell->figure->FigureColor);
 			}
 			break;
 		case Figure::type::ROCK:
-			validMove = fromCell->figure->CanMoveFigure(y2, x2);
+			validMove = fromCell->figure->CanMoveFigure(y2, x2, y1, x1) &&
+				this->isPathSafe(x2, y2, x1, y1, fromCell->figure);
 			break;
 		case Figure::type::KNIGHT:
-			validMove = fromCell->figure->CanMoveFigure(y2, x2);
+			validMove = fromCell->figure->CanMoveFigure(y2, x2,y1, x1) && (fromCell->figure->FigureColor != toCell->figure->FigureColor);
 			break;
 		case Figure::type::BISHOP:
-			validMove = fromCell->figure->CanMoveFigure(y2, x2);
+			validMove = fromCell->figure->CanMoveFigure(y2, x2, y1, x1) &&
+				this->isPathSafe(x2, y2, x1, y1, fromCell->figure);
 			break;
 		case Figure::type::QUEEN:
-			validMove = fromCell->figure->CanMoveFigure(y2, x2);
+			validMove = fromCell->figure->CanMoveFigure(y2, x2, y1, x1) &&
+				this->isPathSafe(x2, y2, x1, y1, fromCell->figure);
 			break;
 		case Figure::type::KING:
-			validMove = fromCell->figure->CanMoveFigure(y2, x2);
+			validMove = fromCell->figure->CanMoveFigure(y2, x2, y1, x1) &&
+				this->isPathSafe(x2, y2, x1, y1, fromCell->figure) && (fromCell->figure->FigureColor != toCell->figure->FigureColor);
 			break;
 		}
 		if (validMove)
-		{  /// делаем ХОД ХОБА
-			Figure* movedFigure = fromCell->figure;
-			toCell->figure = movedFigure;
-			fromCell->figure = nullptr;
+		{  
+			toCell->figure = figure;
 			fromCell->isFree = true;
 			toCell->isFree = false;
+			figure->x = x2;
+			figure->y = y2;
 		}
 		else {
-			std::cout << "Ход неверный";
+			std::cout << "Ход неверный" << std::endl;
 		}
 		
 	}
 }
-
-
 
 void Board::GameStart(Cell* board[8][8]) {
 	while (!isCheckMate(board)) {
